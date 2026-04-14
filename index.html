@@ -2,565 +2,95 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Flappy Clone</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Golf Club Impact Simulator</title>
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #333;
-            overflow: hidden; /* Prevent scrolling */
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            touch-action: none; /* Disable double-tap zoom on mobile */
-        }
-
-        #game-container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            background-color: #70c5ce; /* Sky blue */
-            overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-        }
-
-        /* UI Overlay */
-        #ui-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none; /* Let clicks pass through to canvas */
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-        }
-
-        .score-display {
-            position: absolute;
-            top: 10%;
-            font-size: 4rem;
-            font-weight: bold;
-            color: white;
-            text-shadow: 2px 2px 0 #000;
-            z-index: 10;
-        }
-
-        .message-box {
-            background: rgba(255, 255, 255, 0.9);
-            border: 4px solid #543847;
-            padding: 20px 40px;
-            border-radius: 10px;
-            display: none; /* Hidden by default */
-            pointer-events: auto; /* Enable clicking on buttons */
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-        }
-
-        .message-box h1 {
-            margin: 0 0 10px 0;
-            color: #e86101;
-            font-size: 2rem;
-            text-shadow: 1px 1px 0 #000;
-        }
-
-        .message-box p {
-            font-size: 1.2rem;
-            color: #333;
-            margin-bottom: 20px;
-        }
-
-        .btn {
-            background: #e86101;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            font-size: 1.2rem;
-            border-radius: 5px;
-            cursor: pointer;
-            border-bottom: 4px solid #b54c00;
-            transition: transform 0.1s;
-        }
-
-        .btn:active {
-            transform: translateY(4px);
-            border-bottom: 0;
-        }
-
-        /* Instructions overlay */
-        #start-screen {
-            display: flex;
-        }
-        
-        #game-over-screen {
-            display: none;
-            flex-direction: column;
-            align-items: center;
-        }
-
+        body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 20px; text-align: center; }
+        .container { max-width: 500px; background: white; margin: auto; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h1 { color: #333; }
+        label, select, input { display: block; width: 100%; margin: 10px 0; padding: 10px; font-size: 16px; box-sizing: border-box; }
+        button { background-color: #28a745; color: white; border: none; padding: 15px; font-size: 18px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 10px; }
+        button:hover { background-color: #218838; }
+        .stats-box { margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 5px; text-align: left; }
+        .alert { color: red; font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div id="game-container">
-    <canvas id="gameCanvas"></canvas>
+<div class="container">
+    <h1>🏌️‍♂️ Impact Simulator</h1>
+    <p>Simulate a standard 200g Golf Driver hitting different objects.</p>
 
-    <div id="ui-layer">
-        <div class="score-display" id="score">0</div>
+    <label for="ballType">Select Ball Type:</label>
+    <select id="ballType">
+        <option value="golf">Golf Ball</option>
+        <option value="tennis">Tennis Ball</option>
+        <option value="baseball">Baseball</option>
+        <option value="pingpong">Ping-Pong Ball</option>
+        <option value="bowling">Bowling Ball (15 lbs)</option>
+    </select>
 
-        <!-- Start Screen -->
-        <div id="start-screen" class="message-box" style="display: flex;">
-            <h1>Get Ready!</h1>
-            <p>Tap, Click, or Press Space to Fly</p>
-        </div>
+    <label for="clubSpeed">Club Head Speed (mph):</label>
+    <input type="number" id="clubSpeed" value="100" min="10" max="200">
 
-        <!-- Game Over Screen -->
-        <div id="game-over-screen" class="message-box">
-            <h1>Game Over</h1>
-            <p>Score: <span id="final-score">0</span></p>
-            <p>Best: <span id="best-score">0</span></p>
-            <button class="btn" id="restart-btn">Play Again</button>
-        </div>
+    <button onclick="simulateImpact()">Simulate Hit!</button>
+
+    <div class="stats-box" id="results" style="display: none;">
+        <h3>📊 Impact Stats:</h3>
+        <p><strong>Ball Speed:</strong> <span id="ballSpeed">0</span> mph</p>
+        <p><strong>Club Speed After Impact:</strong> <span id="clubSpeedAfter">0</span> mph</p>
+        <p><strong>Energy Transfer Rating:</strong> <span id="efficiency">0</span>%</p>
+        <p id="warningMessage" class="alert"></p>
     </div>
 </div>
 
 <script>
-/**
- * AUDIO SYSTEM
- * Simple synthesizer using Web Audio API to avoid external assets
- */
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // Physics dictionary: { mass in kg, Coefficient of Restitution }
+    const ballData = {
+        "golf": { name: "Golf Ball", mass: 0.046, cor: 0.80 },
+        "tennis": { name: "Tennis Ball", mass: 0.058, cor: 0.74 },
+        "baseball": { name: "Baseball", mass: 0.145, cor: 0.50 },
+        "pingpong": { name: "Ping-Pong Ball", mass: 0.0027, cor: 0.89 },
+        "bowling": { name: "Bowling Ball", mass: 6.8, cor: 0.10 }
+    };
 
-function playSound(type) {
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    
-    const oscillator = audioCtx.createOscillator();
-    const gainNode = audioCtx.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
-    
-    if (type === 'jump') {
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(300, audioCtx.currentTime);
-        oscillator.frequency.exponentialRampToValueAtTime(500, audioCtx.currentTime + 0.1);
-        gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 0.1);
-    } else if (type === 'score') {
-        oscillator.type = 'square';
-        oscillator.frequency.setValueAtTime(1000, audioCtx.currentTime);
-        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 0.1);
-    } else if (type === 'hit') {
-        oscillator.type = 'sawtooth';
-        oscillator.frequency.setValueAtTime(150, audioCtx.currentTime);
-        oscillator.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.2);
-        gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 0.2);
-    }
-}
+    const CLUB_MASS = 0.200; // 200 grams for a standard driver
 
-/**
- * GAME ENGINE
- */
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const scoreEl = document.getElementById('score');
-const startScreen = document.getElementById('start-screen');
-const gameOverScreen = document.getElementById('game-over-screen');
-const finalScoreEl = document.getElementById('final-score');
-const bestScoreEl = document.getElementById('best-score');
-const restartBtn = document.getElementById('restart-btn');
+    function simulateImpact() {
+        const selectedBall = document.getElementById("ballType").value;
+        const initialClubSpeed = parseFloat(document.getElementById("clubSpeed").value);
 
-// Game Constants
-let frames = 0;
-const DEGREE = Math.PI / 180;
-let currentState = {
-    current: 0,
-    getReady: 0,
-    game: 1,
-    over: 2
-};
+        const ball = ballData[selectedBall];
 
-// Game Variables
-let score = 0;
-let highScore = localStorage.getItem('flappy_highscore') || 0;
-let gameSpeed = 3; 
+        // 1D Collision Physics Formula
+        const ballExitSpeed = (CLUB_MASS * initialClubSpeed * (1 + ball.cor)) / (CLUB_MASS + ball.mass);
 
-// Responsive scaling
-function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-}
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
+        // Conservation of Momentum to find club speed after hit
+        const initialMomentum = CLUB_MASS * initialClubSpeed;
+        const ballMomentum = ball.mass * ballExitSpeed;
+        const finalClubSpeed = (initialMomentum - ballMomentum) / CLUB_MASS;
 
-/**
- * GAME OBJECTS
- */
+        // Calculate efficiency (Smash Factor)
+        const smashFactor = ballExitSpeed / initialClubSpeed;
 
-const bg = {
-    draw: function() {
-        ctx.fillStyle = "#70c5ce";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Clouds (Simple procedurally drawn clouds)
-        ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
-        for(let i=0; i<5; i++) {
-            let x = ((frames * 0.5) + (i * 300)) % (canvas.width + 200) - 100;
-            let y = canvas.height - 150 - (Math.sin(i)*50);
-            ctx.beginPath();
-            ctx.arc(x, y, 40, 0, Math.PI * 2);
-            ctx.arc(x + 30, y - 10, 50, 0, Math.PI * 2);
-            ctx.arc(x + 70, y, 40, 0, Math.PI * 2);
-            ctx.fill();
+        // Display Results
+        document.getElementById("results").style.display = "block";
+        document.getElementById("ballSpeed").innerText = ballExitSpeed.toFixed(1);
+        document.getElementById("clubSpeedAfter").innerText = finalClubSpeed.toFixed(1);
+        document.getElementById("efficiency").innerText = (smashFactor * 100 / 1.5).toFixed(1); // 1.5 is ideal golf smash factor
+
+        // Fun warnings
+        let warning = "";
+        if (ball.name === "Bowling Ball") {
+            warning = "⚠️ WARNING: Club shaft snapped. Wrists shattered. Do not attempt in real life.";
+        } else if (ball.name === "Ping-Pong Ball") {
+            warning = "💨 SWISH: The ball disintegrated in mid-air from the sheer force.";
+        } else if (ball.name === "Baseball") {
+            warning = "🏏 THUD: The club face is likely dented.";
         }
-        
-        // Cityscape Silhouette
-        ctx.fillStyle = "#a3e0c4";
-        const buildingWidth = 60;
-        const numBuildings = Math.ceil(canvas.width / buildingWidth) + 1;
-        const offset = (frames * 0.2) % buildingWidth;
-        
-        for(let i=0; i<numBuildings; i++) {
-            let h = 100 + Math.abs(Math.sin(i * 132)) * 150;
-            ctx.fillRect((i * buildingWidth) - offset, canvas.height - 110 - h, buildingWidth + 2, h);
-        }
+        document.getElementById("warningMessage").innerText = warning;
     }
-}
-
-const fg = {
-    h: 112,
-    draw: function() {
-        ctx.fillStyle = "#ded895";
-        ctx.fillRect(0, canvas.height - this.h, canvas.width, this.h);
-        
-        // Grass top
-        ctx.fillStyle = "#73bf2e";
-        ctx.fillRect(0, canvas.height - this.h, canvas.width, 12);
-        
-        // Stripe pattern
-        ctx.fillStyle = "#9ce659";
-        const stripeWidth = 20;
-        const offset = (frames * gameSpeed) % stripeWidth;
-        for (let i = -1; i < canvas.width / stripeWidth + 1; i++) {
-            ctx.beginPath();
-            ctx.moveTo(i * stripeWidth - offset, canvas.height - this.h);
-            ctx.lineTo(i * stripeWidth - offset + 10, canvas.height - this.h + 12);
-            ctx.lineTo(i * stripeWidth - offset - 5, canvas.height - this.h + 12);
-            ctx.lineTo(i * stripeWidth - offset - 15, canvas.height - this.h);
-            ctx.fill();
-        }
-        
-        // Border
-        ctx.fillStyle = "#555";
-        ctx.fillRect(0, canvas.height - this.h, canvas.width, 2);
-    },
-    update: function() {
-        // Foreground animation happens in draw via offset
-    }
-}
-
-const bird = {
-    animation: [0, 1, 2, 1],
-    x: 50,
-    y: 150,
-    w: 34,
-    h: 24,
-    radius: 12,
-    frame: 0,
-    velocity: 0,
-    gravity: 0.25,
-    jump: 4.6,
-    rotation: 0,
-    
-    draw: function() {
-        let birdFrame = this.animation[Math.floor((frames % 20) / 5)]; // Slow flap
-        
-        ctx.save();
-        ctx.translate(this.x, this.y);
-        ctx.rotate(this.rotation);
-        
-        // Draw Bird Body (Yellow)
-        ctx.fillStyle = "#f4d03f";
-        ctx.beginPath();
-        ctx.ellipse(0, 0, this.radius + 5, this.radius, 0, 0, Math.PI*2);
-        ctx.fill();
-        ctx.strokeStyle = "#000";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        
-        // Eye
-        ctx.fillStyle = "#fff";
-        ctx.beginPath();
-        ctx.arc(6, -6, 6, 0, Math.PI*2);
-        ctx.fill();
-        ctx.stroke();
-        
-        // Pupil
-        ctx.fillStyle = "#000";
-        ctx.beginPath();
-        ctx.arc(8, -6, 2, 0, Math.PI*2);
-        ctx.fill();
-        
-        // Wing
-        ctx.fillStyle = "#fcf3cf";
-        ctx.beginPath();
-        let wingY = (birdFrame === 0) ? 0 : (birdFrame === 1) ? -5 : 5;
-        ctx.ellipse(-5, 2, 8, 5, 0.2, 0, Math.PI*2);
-        ctx.fill();
-        ctx.stroke();
-
-        // Beak
-        ctx.fillStyle = "#e67e22";
-        ctx.beginPath();
-        ctx.moveTo(8, 2);
-        ctx.lineTo(16, 6);
-        ctx.lineTo(8, 10);
-        ctx.fill();
-        ctx.stroke();
-        
-        ctx.restore();
-    },
-    
-    flap: function() {
-        this.velocity = -this.jump;
-        this.rotation = -25 * DEGREE;
-        playSound('jump');
-    },
-    
-    update: function() {
-        // Flap animation speed varies by state
-        const period = currentState.current === currentState.getReady ? 10 : 5;
-        this.frame += frames % period === 0 ? 1 : 0;
-        this.frame = this.frame % this.animation.length;
-        
-        if (currentState.current === currentState.getReady) {
-            this.y = (canvas.height / 2) - 50;
-            this.rotation = 0 * DEGREE;
-        } else {
-            this.velocity += this.gravity;
-            this.y += this.velocity;
-            
-            // Limit falling collision with ground
-            if (this.y + this.h/2 >= canvas.height - fg.h) {
-                this.y = canvas.height - fg.h - this.h/2;
-                if (currentState.current === currentState.game) {
-                    currentState.current = currentState.over;
-                    playSound('hit');
-                    showGameOver();
-                }
-            }
-            
-            // Rotation logic
-            if (this.velocity < this.jump/2) {
-                this.rotation = -25 * DEGREE;
-            } else {
-                this.rotation += 1 * DEGREE;
-                this.rotation = Math.min(this.rotation, 90 * DEGREE); // Cap at 90 degrees
-            }
-        }
-    },
-    
-    reset: function() {
-        this.velocity = 0;
-        this.rotation = 0;
-        this.y = canvas.height / 2;
-        this.x = canvas.width * 0.3; // Responsive X position
-    }
-}
-
-const pipes = {
-    position: [],
-    w: 52,
-    h: 400, // Max pipe height
-    gap: 120, // Space between pipes
-    dx: 3, // Move speed
-    
-    draw: function() {
-        for (let i = 0; i < this.position.length; i++) {
-            let p = this.position[i];
-            let topY = p.y;
-            let bottomY = p.y + this.h + this.gap;
-            
-            // Top Pipe
-            ctx.fillStyle = "#73bf2e"; // Green
-            ctx.fillRect(p.x, p.y, this.w, this.h);
-            ctx.strokeStyle = "#555";
-            ctx.lineWidth = 2;
-            ctx.strokeRect(p.x, p.y, this.w, this.h);
-            
-            // Top Pipe Cap
-            ctx.fillStyle = "#73bf2e";
-            ctx.fillRect(p.x - 2, p.y + this.h - 20, this.w + 4, 20);
-            ctx.strokeRect(p.x - 2, p.y + this.h - 20, this.w + 4, 20);
-            
-            // Bottom Pipe
-            ctx.fillStyle = "#73bf2e";
-            ctx.fillRect(p.x, bottomY, this.w, canvas.height - bottomY - fg.h);
-            ctx.strokeRect(p.x, bottomY, this.w, canvas.height - bottomY - fg.h);
-
-            // Bottom Pipe Cap
-            ctx.fillStyle = "#73bf2e";
-            ctx.fillRect(p.x - 2, bottomY, this.w + 4, 20);
-            ctx.strokeRect(p.x - 2, bottomY, this.w + 4, 20);
-        }
-    },
-    
-    update: function() {
-        if (currentState.current !== currentState.game) return;
-        
-        // Add new pipe
-        if (frames % 120 === 0) {
-            // Random Y position for the gap
-            // Minimum pipe height is 50px
-            const minPipeH = 50;
-            const maxPos = -150; 
-            const minPos = -400 + minPipeH; 
-            
-            // Calculate playable area
-            // We shift the 'y' of the top pipe up so only part of it shows
-            this.position.push({
-                x: canvas.width,
-                y: Math.floor(Math.random() * (maxPos - minPos + 1) + minPos)
-            });
-        }
-        
-        for (let i = 0; i < this.position.length; i++) {
-            let p = this.position[i];
-            
-            // Move pipe
-            p.x -= this.dx;
-            
-            // Collision Detection
-            let bottomPipeY = p.y + this.h + this.gap;
-            
-            // Logic: Bird inside pipe horizontal area?
-            if (bird.x + bird.radius > p.x && bird.x - bird.radius < p.x + this.w) {
-                // Bird inside pipe vertical area (Hit top or bottom)?
-                if (bird.y - bird.radius < p.y + this.h || bird.y + bird.radius > bottomPipeY) {
-                    currentState.current = currentState.over;
-                    playSound('hit');
-                    showGameOver();
-                }
-            }
-            
-            // Remove passed pipes
-            if (p.x + this.w <= 0) {
-                this.position.shift();
-                score++; // Basic score update (refine for precise passing if needed)
-                scoreEl.innerText = score;
-                playSound('score');
-                // Adjust index since we removed an element
-                i--;
-            }
-        }
-    },
-    
-    reset: function() {
-        this.position = [];
-    }
-}
-
-/**
- * CONTROL & EVENTS
- */
-
-function action() {
-    switch (currentState.current) {
-        case currentState.getReady:
-            currentState.current = currentState.game;
-            startScreen.style.display = 'none';
-            scoreEl.style.display = 'block';
-            bird.flap();
-            break;
-        case currentState.game:
-            bird.flap();
-            break;
-        case currentState.over:
-            // Handled by restart button
-            break;
-    }
-}
-
-// Input Listeners
-window.addEventListener('keydown', function(e) {
-    if (e.code === 'Space' || e.code === 'ArrowUp') {
-        e.preventDefault(); // Stop scrolling
-        action();
-    }
-});
-
-canvas.addEventListener('click', action);
-canvas.addEventListener('touchstart', function(e){
-    e.preventDefault(); // Stop zoom/scroll
-    action();
-}, {passive: false});
-
-restartBtn.addEventListener('click', function() {
-    // Reset Game
-    bird.reset();
-    pipes.reset();
-    score = 0;
-    scoreEl.innerText = score;
-    frames = 0;
-    currentState.current = currentState.getReady;
-    
-    // UI
-    gameOverScreen.style.display = 'none';
-    startScreen.style.display = 'flex';
-});
-
-function showGameOver() {
-    scoreEl.style.display = 'none';
-    gameOverScreen.style.display = 'flex';
-    finalScoreEl.innerText = score;
-    
-    // Update High Score
-    highScore = Math.max(score, highScore);
-    localStorage.setItem('flappy_highscore', highScore);
-    bestScoreEl.innerText = highScore;
-}
-
-/**
- * MAIN LOOP
- */
-
-function loop() {
-    // Update Physics
-    bird.update();
-    fg.update();
-    pipes.update();
-    
-    // Draw Everything
-    bg.draw();
-    pipes.draw();
-    fg.draw(); // Foreground covers pipes
-    bird.draw();
-    
-    frames++;
-    requestAnimationFrame(loop);
-}
-
-// Initial Setup
-bird.reset();
-loop();
-
 </script>
+
 </body>
 </html>
