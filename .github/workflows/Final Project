@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Golf Club Impact Simulator</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 20px; text-align: center; }
+        .container { max-width: 500px; background: white; margin: auto; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h1 { color: #333; }
+        label, select, input { display: block; width: 100%; margin: 10px 0; padding: 10px; font-size: 16px; box-sizing: border-box; }
+        button { background-color: #28a745; color: white; border: none; padding: 15px; font-size: 18px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 10px; }
+        button:hover { background-color: #218838; }
+        .stats-box { margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 5px; text-align: left; }
+        .alert { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🏌️‍♂️ Impact Simulator</h1>
+    <p>Simulate a standard 200g Golf Driver hitting different objects.</p>
+
+    <label for="ballType">Select Ball Type:</label>
+    <select id="ballType">
+        <option value="golf">Golf Ball</option>
+        <option value="tennis">Tennis Ball</option>
+        <option value="baseball">Baseball</option>
+        <option value="pingpong">Ping-Pong Ball</option>
+        <option value="bowling">Bowling Ball (15 lbs)</option>
+    </select>
+
+    <label for="clubSpeed">Club Head Speed (mph):</label>
+    <input type="number" id="clubSpeed" value="100" min="10" max="200">
+
+    <button onclick="simulateImpact()">Simulate Hit!</button>
+
+    <div class="stats-box" id="results" style="display: none;">
+        <h3>📊 Impact Stats:</h3>
+        <p><strong>Ball Speed:</strong> <span id="ballSpeed">0</span> mph</p>
+        <p><strong>Club Speed After Impact:</strong> <span id="clubSpeedAfter">0</span> mph</p>
+        <p><strong>Energy Transfer Rating:</strong> <span id="efficiency">0</span>%</p>
+        <p id="warningMessage" class="alert"></p>
+    </div>
+</div>
+
+<script>
+    // Physics dictionary: { mass in kg, Coefficient of Restitution }
+    const ballData = {
+        "golf": { name: "Golf Ball", mass: 0.046, cor: 0.80 },
+        "tennis": { name: "Tennis Ball", mass: 0.058, cor: 0.74 },
+        "baseball": { name: "Baseball", mass: 0.145, cor: 0.50 },
+        "pingpong": { name: "Ping-Pong Ball", mass: 0.0027, cor: 0.89 },
+        "bowling": { name: "Bowling Ball", mass: 6.8, cor: 0.10 }
+    };
+
+    const CLUB_MASS = 0.200; // 200 grams for a standard driver
+
+    function simulateImpact() {
+        const selectedBall = document.getElementById("ballType").value;
+        const initialClubSpeed = parseFloat(document.getElementById("clubSpeed").value);
+
+        const ball = ballData[selectedBall];
+
+        // 1D Collision Physics Formula
+        const ballExitSpeed = (CLUB_MASS * initialClubSpeed * (1 + ball.cor)) / (CLUB_MASS + ball.mass);
+
+        // Conservation of Momentum to find club speed after hit
+        const initialMomentum = CLUB_MASS * initialClubSpeed;
+        const ballMomentum = ball.mass * ballExitSpeed;
+        const finalClubSpeed = (initialMomentum - ballMomentum) / CLUB_MASS;
+
+        // Calculate efficiency (Smash Factor)
+        const smashFactor = ballExitSpeed / initialClubSpeed;
+
+        // Display Results
+        document.getElementById("results").style.display = "block";
+        document.getElementById("ballSpeed").innerText = ballExitSpeed.toFixed(1);
+        document.getElementById("clubSpeedAfter").innerText = finalClubSpeed.toFixed(1);
+        document.getElementById("efficiency").innerText = (smashFactor * 100 / 1.5).toFixed(1); // 1.5 is ideal golf smash factor
+
+        // Fun warnings
+        let warning = "";
+        if (ball.name === "Bowling Ball") {
+            warning = "⚠️ WARNING: Club shaft snapped. Wrists shattered. Do not attempt in real life.";
+        } else if (ball.name === "Ping-Pong Ball") {
+            warning = "💨 SWISH: The ball disintegrated in mid-air from the sheer force.";
+        } else if (ball.name === "Baseball") {
+            warning = "🏏 THUD: The club face is likely dented.";
+        }
+        document.getElementById("warningMessage").innerText = warning;
+    }
+</script>
+
+</body>
+</html>
