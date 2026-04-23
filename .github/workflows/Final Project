@@ -1,96 +1,150 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Golf Club Impact Simulator</title>
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 20px; text-align: center; }
-        .container { max-width: 500px; background: white; margin: auto; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        h1 { color: #333; }
-        label, select, input { display: block; width: 100%; margin: 10px 0; padding: 10px; font-size: 16px; box-sizing: border-box; }
-        button { background-color: #28a745; color: white; border: none; padding: 15px; font-size: 18px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 10px; }
-        button:hover { background-color: #218838; }
-        .stats-box { margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 5px; text-align: left; }
-        .alert { color: red; font-weight: bold; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Cube Physics Simulation</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<style>
+body { margin: 0; background: #111; }
+#canvas { width: 100vw; height: 100vh; }
+button { margin: 5px; padding: 10px; }
+.controls {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: white;
+    padding: 10px;
+    border-radius: 8px;
+}
+</style>
 </head>
+
 <body>
 
-<div class="container">
-    <h1>🏌️‍♂️ Impact Simulator</h1>
-    <p>Simulate a standard 200g Golf Driver hitting different objects.</p>
+<div id="canvas"></div>
 
-    <label for="ballType">Select Ball Type:</label>
-    <select id="ballType">
-        <option value="golf">Golf Ball</option>
-        <option value="tennis">Tennis Ball</option>
-        <option value="baseball">Baseball</option>
-        <option value="pingpong">Ping-Pong Ball</option>
-        <option value="bowling">Bowling Ball (15 lbs)</option>
-    </select>
-
-    <label for="clubSpeed">Club Head Speed (mph):</label>
-    <input type="number" id="clubSpeed" value="100" min="10" max="200">
-
-    <button onclick="simulateImpact()">Simulate Hit!</button>
-
-    <div class="stats-box" id="results" style="display: none;">
-        <h3>📊 Impact Stats:</h3>
-        <p><strong>Ball Speed:</strong> <span id="ballSpeed">0</span> mph</p>
-        <p><strong>Club Speed After Impact:</strong> <span id="clubSpeedAfter">0</span> mph</p>
-        <p><strong>Energy Transfer Rating:</strong> <span id="efficiency">0</span>%</p>
-        <p id="warningMessage" class="alert"></p>
-    </div>
+<div class="controls">
+    <button id="startBtn">Start</button>
+    <button id="pauseBtn">Pause</button>
+    <button id="resetBtn">Reset</button>
 </div>
 
 <script>
-    // Physics dictionary: { mass in kg, Coefficient of Restitution }
-    const ballData = {
-        "golf": { name: "Golf Ball", mass: 0.046, cor: 0.80 },
-        "tennis": { name: "Tennis Ball", mass: 0.058, cor: 0.74 },
-        "baseball": { name: "Baseball", mass: 0.145, cor: 0.50 },
-        "pingpong": { name: "Ping-Pong Ball", mass: 0.0027, cor: 0.89 },
-        "bowling": { name: "Bowling Ball", mass: 6.8, cor: 0.10 }
-    };
+// THREE SETUP
+let scene, camera, renderer;
+let cube, box;
+let isRunning = false, isPaused = false;
 
-    const CLUB_MASS = 0.200; // 200 grams for a standard driver
+const G = 9.81;
+const DT = 0.016;
+const SIZE = 10;
 
-    function simulateImpact() {
-        const selectedBall = document.getElementById("ballType").value;
-        const initialClubSpeed = parseFloat(document.getElementById("clubSpeed").value);
+let position = new THREE.Vector3(0, 3, 0);
+let velocity = new THREE.Vector3(2, 0, 1);
+let acceleration = new THREE.Vector3();
 
-        const ball = ballData[selectedBall];
+function init() {
+    const canvasContainer = document.getElementById("canvas");
 
-        // 1D Collision Physics Formula
-        const ballExitSpeed = (CLUB_MASS * initialClubSpeed * (1 + ball.cor)) / (CLUB_MASS + ball.mass);
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x222222);
 
-        // Conservation of Momentum to find club speed after hit
-        const initialMomentum = CLUB_MASS * initialClubSpeed;
-        const ballMomentum = ball.mass * ballExitSpeed;
-        const finalClubSpeed = (initialMomentum - ballMomentum) / CLUB_MASS;
+    camera = new THREE.PerspectiveCamera(
+        75,
+        canvasContainer.clientWidth / canvasContainer.clientHeight,
+        0.1,
+        1000
+    );
+    camera.position.set(8, 6, 8);
+    camera.lookAt(0, 0, 0);
 
-        // Calculate efficiency (Smash Factor)
-        const smashFactor = ballExitSpeed / initialClubSpeed;
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
+    canvasContainer.appendChild(renderer.domElement);
 
-        // Display Results
-        document.getElementById("results").style.display = "block";
-        document.getElementById("ballSpeed").innerText = ballExitSpeed.toFixed(1);
-        document.getElementById("clubSpeedAfter").innerText = finalClubSpeed.toFixed(1);
-        document.getElementById("efficiency").innerText = (smashFactor * 100 / 1.5).toFixed(1); // 1.5 is ideal golf smash factor
+    // LIGHT
+    const light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(5, 10, 5);
+    scene.add(light);
 
-        // Fun warnings
-        let warning = "";
-        if (ball.name === "Bowling Ball") {
-            warning = "⚠️ WARNING: Club shaft snapped. Wrists shattered. Do not attempt in real life.";
-        } else if (ball.name === "Ping-Pong Ball") {
-            warning = "💨 SWISH: The ball disintegrated in mid-air from the sheer force.";
-        } else if (ball.name === "Baseball") {
-            warning = "🏏 THUD: The club face is likely dented.";
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+
+    // BOX
+    const geo = new THREE.BoxGeometry(SIZE, SIZE, SIZE);
+    const mat = new THREE.MeshBasicMaterial({ color: 0x888888, wireframe: true });
+    box = new THREE.Mesh(geo, mat);
+    scene.add(box);
+
+    // CUBE
+    const cubeGeo = new THREE.BoxGeometry(1, 1, 1);
+    const cubeMat = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
+    cube = new THREE.Mesh(cubeGeo, cubeMat);
+    scene.add(cube);
+
+    window.addEventListener("resize", onResize);
+}
+
+function onResize() {
+    const canvasContainer = document.getElementById("canvas");
+    camera.aspect = canvasContainer.clientWidth / canvasContainer.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
+}
+
+// PHYSICS
+function step() {
+    acceleration.set(0, -G, 0);
+
+    velocity.addScaledVector(acceleration, DT);
+    position.addScaledVector(velocity, DT);
+
+    // COLLISIONS
+    const half = SIZE / 2 - 0.5;
+
+    ["x","y","z"].forEach(axis => {
+        if (position[axis] > half) {
+            position[axis] = half;
+            velocity[axis] *= -0.75;
         }
-        document.getElementById("warningMessage").innerText = warning;
-    }
-</script>
+        if (position[axis] < -half) {
+            position[axis] = -half;
+            velocity[axis] *= -0.75;
+        }
+    });
+}
 
+// LOOP
+function animate() {
+    requestAnimationFrame(animate);
+
+    if (isRunning && !isPaused) {
+        step();
+    }
+
+    cube.position.copy(position);
+    renderer.render(scene, camera);
+}
+
+// BUTTONS
+document.getElementById("startBtn").onclick = () => {
+    isRunning = true;
+};
+
+document.getElementById("pauseBtn").onclick = () => {
+    isPaused = !isPaused;
+};
+
+document.getElementById("resetBtn").onclick = () => {
+    position.set(0, 3, 0);
+    velocity.set(2, 0, 1);
+};
+
+// INIT
+init();
+animate();
+
+</script>
 </body>
 </html>
