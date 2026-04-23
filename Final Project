@@ -3,94 +3,804 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Golf Club Impact Simulator</title>
+    <title>3D Cube Physics Simulation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 20px; text-align: center; }
-        .container { max-width: 500px; background: white; margin: auto; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        h1 { color: #333; }
-        label, select, input { display: block; width: 100%; margin: 10px 0; padding: 10px; font-size: 16px; box-sizing: border-box; }
-        button { background-color: #28a745; color: white; border: none; padding: 15px; font-size: 18px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 10px; }
-        button:hover { background-color: #218838; }
-        .stats-box { margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 5px; text-align: left; }
-        .alert { color: red; font-weight: bold; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        header h1 {
+            font-size: 2.5em;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            font-size: 1.1em;
+            color: #666;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .visualization-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            height: 600px;
+            position: relative;
+        }
+        
+        #canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+        }
+        
+        .info-panel {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .info-section {
+            border-left: 4px solid #667eea;
+            padding-left: 15px;
+        }
+        
+        .info-section h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .info-item:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .info-value {
+            color: #667eea;
+            font-weight: bold;
+        }
+        
+        .control-panel {
+            background: #f8f9ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: auto;
+        }
+        
+        .control-panel h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .slider-group {
+            margin-bottom: 15px;
+        }
+        
+        .slider-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+            color: #555;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background: #667eea;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            font-weight: 600;
+        }
+        
+        button:hover {
+            background: #764ba2;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        
+        .card p {
+            line-height: 1.6;
+            color: #555;
+            margin-bottom: 10px;
+        }
+        
+        .features {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin-bottom: 30px;
+        }
+        
+        .features h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+        
+        .feature-list {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        
+        .feature-list li {
+            padding: 15px;
+            background: #f8f9ff;
+            border-left: 4px solid #667eea;
+            border-radius: 5px;
+        }
+        
+        .feature-list li::before {
+            content: "✓ ";
+            color: #667eea;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .btn {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 5px;
+            text-decoration: none;
+            transition: background 0.3s ease;
+            margin-top: 10px;
+        }
+        
+        .btn:hover {
+            background: #764ba2;
+        }
+        
+        .stats {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin-bottom: 30px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-box .number {
+            font-size: 2em;
+            font-weight: bold;
+        }
+        
+        .stat-box .label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        footer {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            color: #666;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .legend {
+            background: #f8f9ff;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.85em;
+            margin-top: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+            border-radius: 3px;
+        }
     </style>
 </head>
 <body>
+    <div class="container">
+        <header>
+            <h1>🎲 3D Cube Physics Simulation</h1>
+            <p>Advanced Computational Methods Final Project - Interactive Visualization</p>
+        </header>
 
-<div class="container">
-    <h1>🏌️‍♂️ Impact Simulator</h1>
-    <p>Simulate a standard 200g Golf Driver hitting different objects.</p>
+        <div class="main-content">
+            <div class="visualization-container">
+                <canvas id="canvas"></canvas>
+            </div>
 
-    <label for="ballType">Select Ball Type:</label>
-    <select id="ballType">
-        <option value="golf">Golf Ball</option>
-        <option value="tennis">Tennis Ball</option>
-        <option value="baseball">Baseball</option>
-        <option value="pingpong">Ping-Pong Ball</option>
-        <option value="bowling">Bowling Ball (15 lbs)</option>
-    </select>
+            <div class="info-panel">
+                <div class="control-panel">
+                    <h4>🎮 Simulation Controls</h4>
+                    
+                    <div class="slider-group">
+                        <label>Initial Speed: <span id="speedValue">2.0</span> m/s</label>
+                        <input type="range" id="speedSlider" min="0.5" max="5" step="0.1" value="2">
+                    </div>
 
-    <label for="clubSpeed">Club Head Speed (mph):</label>
-    <input type="number" id="clubSpeed" value="100" min="10" max="200">
+                    <div class="slider-group">
+                        <label>Simulation Speed: <span id="timeScaleValue">1.0</span>x</label>
+                        <input type="range" id="timeScaleSlider" min="0.1" max="2" step="0.1" value="1">
+                    </div>
 
-    <button onclick="simulateImpact()">Simulate Hit!</button>
+                    <div class="button-group">
+                        <button id="startBtn">▶ Start</button>
+                        <button id="pauseBtn" disabled>⏸ Pause</button>
+                        <button id="resetBtn">🔄 Reset</button>
+                    </div>
+                </div>
 
-    <div class="stats-box" id="results" style="display: none;">
-        <h3>📊 Impact Stats:</h3>
-        <p><strong>Ball Speed:</strong> <span id="ballSpeed">0</span> mph</p>
-        <p><strong>Club Speed After Impact:</strong> <span id="clubSpeedAfter">0</span> mph</p>
-        <p><strong>Energy Transfer Rating:</strong> <span id="efficiency">0</span>%</p>
-        <p id="warningMessage" class="alert"></p>
+                <div class="info-section">
+                    <h3>📍 Position</h3>
+                    <div class="info-item">
+                        <span class="info-label">X:</span>
+                        <span class="info-value" id="posX">0.00</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Y:</span>
+                        <span class="info-value" id="posY">5.00</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Z:</span>
+                        <span class="info-value" id="posZ">0.00</span>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <h3>⚡ Velocity</h3>
+                    <div class="info-item">
+                        <span class="info-label">Speed:</span>
+                        <span class="info-value" id="speed">0.00</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Vx:</span>
+                        <span class="info-value" id="velX">0.00</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Vy:</span>
+                        <span class="info-value" id="velY">0.00</span>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <h3>💪 Forces</h3>
+                    <div class="info-item">
+                        <span class="info-label">Gravity:</span>
+                        <span class="info-value" id="forceGrav">9.81</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Drag:</span>
+                        <span class="info-value" id="forceDrag">0.00</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Collision:</span>
+                        <span class="info-value" id="forceCol">0.00</span>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <h3>⚡ Energy</h3>
+                    <div class="info-item">
+                        <span class="info-label">Kinetic:</span>
+                        <span class="info-value" id="energyK">0.00</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Potential:</span>
+                        <span class="info-value" id="energyP">0.00</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Total:</span>
+                        <span class="info-value" id="energyT">0.00</span>
+                    </div>
+                </div>
+
+                <div class="legend">
+                    <div style="font-weight: bold; margin-bottom: 8px;">Legend:</div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #00ff00;"></div>
+                        <span>Cube (Green)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #888;"></div>
+                        <span>Container (Gray)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ff0000;"></div>
+                        <span>Gravity Vector</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #0088ff;"></div>
+                        <span>Velocity Vector</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h2>📊 About</h2>
+                <p>A sophisticated 3D physics simulation demonstrating a cube bouncing inside a container with realistic force calculations using the Velocity Verlet numerical integration method.</p>
+                <p>Built with Python, NumPy, and Matplotlib for a computational methods course.</p>
+            </div>
+            
+            <div class="card">
+                <h2>🔬 Physics Engine</h2>
+                <p><strong>Velocity Verlet Integration:</strong> More accurate than basic Euler method</p>
+                <p><strong>Three Force Types:</strong> Gravity, Air Drag, Collision Forces</p>
+                <p><strong>Energy Tracking:</strong> Kinetic, Potential, and Total Energy Conservation</p>
+            </div>
+            
+            <div class="card">
+                <h2>📈 Visualization</h2>
+                <p>Interactive 3D visualization with real-time force vectors and physics data display. Advanced analysis tools provide detailed insights into collision events and energy dissipation.</p>
+            </div>
+        </div>
+
+        <div class="features">
+            <h2>✨ Key Features</h2>
+            <ul class="feature-list">
+                <li>Velocity Verlet Numerical Integration</li>
+                <li>Realistic Gravity Force (9.81 m/s²)</li>
+                <li>Air Drag Calculation (velocity squared)</li>
+                <li>Collision Detection & Response</li>
+                <li>Interactive 3D Visualization</li>
+                <li>Real-time Force Analysis</li>
+                <li>Energy Conservation Tracking</li>
+                <li>Advanced Analysis Tools</li>
+                <li>Coefficient of Restitution Modeling</li>
+                <li>Detailed Statistics Output</li>
+            </ul>
+        </div>
+
+        <div class="stats">
+            <h2>📊 Simulation Parameters</h2>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="number">30s</div>
+                    <div class="label">Simulation Duration</div>
+                </div>
+                <div class="stat-box">
+                    <div class="number">1,875</div>
+                    <div class="label">Time Steps (60 FPS)</div>
+                </div>
+                <div class="stat-box">
+                    <div class="number">9.81</div>
+                    <div class="label">Gravity (m/s²)</div>
+                </div>
+                <div class="stat-box">
+                    <div class="number">0.75</div>
+                    <div class="label">Coefficient of Restitution</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="background: #f0f4ff;">
+            <h2>🚀 Quick Start</h2>
+            <p><strong>Installation:</strong></p>
+            <div class="code-block">
+pip install -r requirements.txt
+            </div>
+            
+            <p><strong>Run Simulation:</strong></p>
+            <div class="code-block">
+python main.py
+            </div>
+            
+            <p><strong>Advanced Analysis:</strong></p>
+            <div class="code-block">
+python analysis.py
+            </div>
+            
+            <a href="https://github.com/rfallison25-cell/Test1/tree/main/3d-physics-simulation" class="btn">View on GitHub</a>
+        </div>
+
+        <footer>
+            <p>💡 Computational Methods Final Project | Python | NumPy | Matplotlib | Three.js | Physics Simulation</p>
+            <p>© 2026 rfallison25-cell</p>
+        </footer>
     </div>
-</div>
 
-<script>
-    // Physics dictionary: { mass in kg, Coefficient of Restitution }
-    const ballData = {
-        "golf": { name: "Golf Ball", mass: 0.046, cor: 0.80 },
-        "tennis": { name: "Tennis Ball", mass: 0.058, cor: 0.74 },
-        "baseball": { name: "Baseball", mass: 0.145, cor: 0.50 },
-        "pingpong": { name: "Ping-Pong Ball", mass: 0.0027, cor: 0.89 },
-        "bowling": { name: "Bowling Ball", mass: 6.8, cor: 0.10 }
-    };
+    <script>
+        // Three.js Scene Setup
+        let scene, camera, renderer;
+        let cube, container, velocityArrow, gravityArrow;
+        let isRunning = false;
+        let isPaused = false;
 
-    const CLUB_MASS = 0.200; // 200 grams for a standard driver
+        // Physics parameters
+        const G = 9.81;
+        const DRAG_COEFFICIENT = 0.47;
+        const AIR_DENSITY = 1.225;
+        const CUBE_MASS = 1.0;
+        const CUBE_SIZE = 0.5;
+        const CONTAINER_SIZE = 10.0;
+        const COEFFICIENT_OF_RESTITUTION = 0.75;
+        const DT = 0.016;
 
-    function simulateImpact() {
-        const selectedBall = document.getElementById("ballType").value;
-        const initialClubSpeed = parseFloat(document.getElementById("clubSpeed").value);
+        // Simulation state
+        let position = new THREE.Vector3(0, 5, 0);
+        let velocity = new THREE.Vector3(2, 0, 1.5);
+        let acceleration = new THREE.Vector3(0, 0, 0);
+        let forces = {
+            gravity: new THREE.Vector3(0, -CUBE_MASS * G, 0),
+            drag: new THREE.Vector3(0, 0, 0),
+            collision: new THREE.Vector3(0, 0, 0)
+        };
+        let energy = { kinetic: 0, potential: 0, total: 0 };
 
-        const ball = ballData[selectedBall];
+        function initThreeJS() {
+            const container = document.getElementById('canvas');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf0f4ff);
 
-        // 1D Collision Physics Formula
-        const ballExitSpeed = (CLUB_MASS * initialClubSpeed * (1 + ball.cor)) / (CLUB_MASS + ball.mass);
+            camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(8, 6, 8);
+            camera.lookAt(0, 0, 0);
 
-        // Conservation of Momentum to find club speed after hit
-        const initialMomentum = CLUB_MASS * initialClubSpeed;
-        const ballMomentum = ball.mass * ballExitSpeed;
-        const finalClubSpeed = (initialMomentum - ballMomentum) / CLUB_MASS;
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
 
-        // Calculate efficiency (Smash Factor)
-        const smashFactor = ballExitSpeed / initialClubSpeed;
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 10, 5);
+            scene.add(directionalLight);
 
-        // Display Results
-        document.getElementById("results").style.display = "block";
-        document.getElementById("ballSpeed").innerText = ballExitSpeed.toFixed(1);
-        document.getElementById("clubSpeedAfter").innerText = finalClubSpeed.toFixed(1);
-        document.getElementById("efficiency").innerText = (smashFactor * 100 / 1.5).toFixed(1); // 1.5 is ideal golf smash factor
+            // Container (wireframe box)
+            const containerGeometry = new THREE.BoxGeometry(CONTAINER_SIZE, CONTAINER_SIZE, CONTAINER_SIZE);
+            const containerMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0x888888, 
+                wireframe: true,
+                linewidth: 2
+            });
+            container = new THREE.Mesh(containerGeometry, containerMaterial);
+            scene.add(container);
 
-        // Fun warnings
-        let warning = "";
-        if (ball.name === "Bowling Ball") {
-            warning = "⚠️ WARNING: Club shaft snapped. Wrists shattered. Do not attempt in real life.";
-        } else if (ball.name === "Ping-Pong Ball") {
-            warning = "💨 SWISH: The ball disintegrated in mid-air from the sheer force.";
-        } else if (ball.name === "Baseball") {
-            warning = "🏏 THUD: The club face is likely dented.";
+            // Cube
+            const cubeGeometry = new THREE.BoxGeometry(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE);
+            const cubeMaterial = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
+            cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+            cube.position.copy(position);
+            scene.add(cube);
+
+            // Arrows for force visualization
+            gravityArrow = new THREE.ArrowHelper(
+                new THREE.Vector3(0, -1, 0).normalize(),
+                cube.position.clone(),
+                2,
+                0xff0000,
+                0.5,
+                0.3
+            );
+            scene.add(gravityArrow);
+
+            velocityArrow = new THREE.ArrowHelper(
+                velocity.clone().normalize(),
+                cube.position.clone(),
+                2,
+                0x0088ff,
+                0.5,
+                0.3
+            );
+            scene.add(velocityArrow);
+
+            window.addEventListener('resize', onWindowResize);
         }
-        document.getElementById("warningMessage").innerText = warning;
-    }
-</script>
 
+        function onWindowResize() {
+            const canvas = document.getElementById('canvas');
+            const width = canvas.clientWidth;
+            const height = canvas.clientHeight;
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+        }
+
+        function calculateDragForce() {
+            const speed = velocity.length();
+            if (speed < 0.01) {
+                forces.drag.set(0, 0, 0);
+                return;
+            }
+            const area = CUBE_SIZE * CUBE_SIZE;
+            const dragMagnitude = 0.5 * AIR_DENSITY * speed * speed * DRAG_COEFFICIENT * area;
+            forces.drag.copy(velocity).normalize().multiplyScalar(-dragMagnitude);
+        }
+
+        function checkCollisions() {
+            forces.collision.set(0, 0, 0);
+            const halfContainer = CONTAINER_SIZE / 2;
+            const halfCube = CUBE_SIZE / 2;
+
+            const axes = [0, 1, 2];
+            for (let axis of axes) {
+                if (position.getComponent(axis) - halfCube <= -halfContainer) {
+                    const penetration = (-halfContainer) - (position.getComponent(axis) - halfCube);
+                    const forceComponent = penetration * 100000;
+                    forces.collision.setComponent(axis, forceComponent);
+                    if (velocity.getComponent(axis) < 0) {
+                        velocity.setComponent(axis, velocity.getComponent(axis) * -COEFFICIENT_OF_RESTITUTION * 0.9);
+                    }
+                    position.setComponent(axis, -halfContainer + halfCube + 0.01);
+                }
+                if (position.getComponent(axis) + halfCube >= halfContainer) {
+                    const penetration = (position.getComponent(axis) + halfCube) - halfContainer;
+                    const forceComponent = -penetration * 100000;
+                    forces.collision.setComponent(axis, forceComponent);
+                    if (velocity.getComponent(axis) > 0) {
+                        velocity.setComponent(axis, velocity.getComponent(axis) * -COEFFICIENT_OF_RESTITUTION * 0.9);
+                    }
+                    position.setComponent(axis, halfContainer - halfCube - 0.01);
+                }
+            }
+        }
+
+        function calculateForces() {
+            forces.gravity.set(0, -CUBE_MASS * G, 0);
+            calculateDragForce();
+            checkCollisions();
+        }
+
+        function updateEnergy() {
+            const speed = velocity.length();
+            energy.kinetic = 0.5 * CUBE_MASS * speed * speed;
+            const height = position.y + CONTAINER_SIZE / 2;
+            energy.potential = CUBE_MASS * G * height;
+            energy.total = energy.kinetic + energy.potential;
+        }
+
+        function step() {
+            calculateForces();
+            
+            const oldAcceleration = acceleration.clone();
+            const netForce = forces.gravity.clone().add(forces.drag).add(forces.collision);
+            
+            position.addScaledVector(velocity, DT).addScaledVector(oldAcceleration, 0.5 * DT * DT);
+            
+            calculateForces();
+            acceleration.copy(netForce).divideScalar(CUBE_MASS);
+            
+            velocity.addScaledVector(oldAcceleration.add(acceleration), 0.5 * DT);
+            
+            updateEnergy();
+        }
+
+        function updateVisualization() {
+            cube.position.copy(position);
+            
+            // Update arrows
+            scene.remove(gravityArrow);
+            scene.remove(velocityArrow);
+            
+            gravityArrow = new THREE.ArrowHelper(
+                new THREE.Vector3(0, -1, 0),
+                position.clone(),
+                forces.gravity.length() / 50,
+                0xff0000,
+                0.5,
+                0.3
+            );
+            scene.add(gravityArrow);
+            
+            if (velocity.length() > 0.1) {
+                velocityArrow = new THREE.ArrowHelper(
+                    velocity.clone().normalize(),
+                    position.clone(),
+                    velocity.length(),
+                    0x0088ff,
+                    0.5,
+                    0.3
+                );
+                scene.add(velocityArrow);
+            }
+
+            // Update info panel
+            document.getElementById('posX').textContent = position.x.toFixed(2);
+            document.getElementById('posY').textContent = position.y.toFixed(2);
+            document.getElementById('posZ').textContent = position.z.toFixed(2);
+            
+            const speed = velocity.length();
+            document.getElementById('speed').textContent = speed.toFixed(2);
+            document.getElementById('velX').textContent = velocity.x.toFixed(2);
+            document.getElementById('velY').textContent = velocity.y.toFixed(2);
+            
+            document.getElementById('forceGrav').textContent = forces.gravity.length().toFixed(2);
+            document.getElementById('forceDrag').textContent = forces.drag.length().toFixed(2);
+            document.getElementById('forceCol').textContent = forces.collision.length().toFixed(2);
+            
+            document.getElementById('energyK').textContent = energy.kinetic.toFixed(2);
+            document.getElementById('energyP').textContent = energy.potential.toFixed(2);
+            document.getElementById('energyT').textContent = energy.total.toFixed(2);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (isRunning && !isPaused) {
+                const timeScale = parseFloat(document.getElementById('timeScaleSlider').value);
+                for (let i = 0; i < timeScale; i++) {
+                    step();
+                }
+            }
+
+            updateVisualization();
+            renderer.render(scene, camera);
+        }
+
+        // Event listeners
+        document.getElementById('startBtn').addEventListener('click', () => {
+            isRunning = true;
+            isPaused = false;
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('pauseBtn').disabled = false;
+        });
+
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            isPaused = !isPaused;
+            document.getElementById('pauseBtn').textContent = isPaused ? '▶ Resume' : '⏸ Pause';
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            isRunning = false;
+            isPaused = false;
+            position.set(0, 5, 0);
+            velocity.set(2, 0, 1.5);
+            acceleration.set(0, 0, 0);
+            updateVisualization();
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('pauseBtn').disabled = true;
+            document.getElementById('pauseBtn').textContent = '⏸ Pause';
+        });
+
+        document.getElementById('speedSlider').addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value);
+            document.getElementById('speedValue').textContent = value.toFixed(1);
+            if (!isRunning) {
+                velocity.set(value, 0, 1.5);
+                updateVisualization();
+            }
+        });
+
+        document.getElementById('timeScaleSlider').addEventListener('input', (e) => {
+            document.getElementById('timeScaleValue').textContent = e.target.value;
+        });
+
+        // Initialize
+        initThreeJS();
+        updateEnergy();
+        updateVisualization();
+        animate();
+    </script>
 </body>
 </html>
